@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentContentHash = localStorage.getItem('uni-note_hash') || "";
   let currentProfilePhoto = localStorage.getItem('uni-note_profilePhoto') || null;
   let saveTimeout = null;
-  const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:3000' : ' ';
+  const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
 
   // Tab State Management
   let tabsData = {};
