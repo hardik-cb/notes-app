@@ -3,15 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const appContainer = document.getElementById('app-container');
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
-  
+
   const canvas = document.getElementById('editor-canvas');
   const syncDot = document.getElementById('sync-dot');
   const syncText = document.getElementById('sync-text');
-  
+
   const tabGroup = document.getElementById('tab-group');
   const addTabBtn = document.getElementById('add-tab-btn');
   const manualSaveBtn = document.getElementById('manual-save-btn');
-  
+
   const newTabModal = document.getElementById('new-tab-modal');
   const newTabForm = document.getElementById('new-tab-form');
   const cancelTabBtn = document.getElementById('cancel-tab-btn');
@@ -21,13 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
   const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
   const deleteTabNameLabel = document.getElementById('delete-tab-name-label');
-  let tabIdToDelete = null; 
+  let tabIdToDelete = null;
 
   const themeToggle = document.getElementById('theme-toggle');
   const logoutBtn = document.getElementById('logout-btn');
   const htmlEl = document.documentElement;
   const themeIcon = document.getElementById('theme-icon');
-  
+
   const userAvatar = document.getElementById('user-initial');
   const profileModal = document.getElementById('profile-modal');
   const closeProfileBtn = document.getElementById('close-profile-btn');
@@ -35,12 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const uploadImageBtn = document.getElementById('upload-image-btn');
   const profileFileInput = document.getElementById('profile-file-input');
   const clearImageBtn = document.getElementById('clear-image-btn');
-  
+
   let currentUser = localStorage.getItem('uni-note_username') || null;
   let currentContentHash = localStorage.getItem('uni-note_hash') || "";
   let currentProfilePhoto = localStorage.getItem('uni-note_profilePhoto') || null;
   let saveTimeout = null;
-  const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+  const API_BASE = window.location.protocol === 'file:' ? 'http://localhost:3000' : ' ';
 
   // Tab State Management
   let tabsData = {};
@@ -84,10 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.textContent = "";
-    
+
     const userval = document.getElementById('username').value.trim();
     const passval = document.getElementById('password').value;
-    
+
     if (!userval || !passval) return;
     loginForm.querySelector('button').textContent = "Authenticating...";
 
@@ -99,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ username: userval, passwordHash })
       });
       const data = await res.json();
-      
+
       if (!res.ok) throw new Error(data.error || "Login Failed");
-      
+
       localStorage.setItem('uni-note_username', userval);
       if (data.content) {
         localStorage.setItem('uni-note_content', data.content);
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentProfilePhoto = data.profilePhoto;
         localStorage.setItem('uni-note_profilePhoto', currentProfilePhoto);
       }
-      
+
       loginForm.querySelector('button').textContent = "Enter Workspace";
       loadApp(userval);
     } catch (err) {
@@ -127,22 +127,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Logout Flow
   logoutBtn.addEventListener('click', () => {
     clearTimeout(saveTimeout);
-    
+
     localStorage.removeItem('uni-note_username');
     localStorage.removeItem('uni-note_content');
     localStorage.removeItem('uni-note_hash');
     localStorage.removeItem('uni-note_activeTab');
-    
+
     currentUser = null;
     tabsData = {};
     activeTabId = null;
     currentContentHash = "";
-    
+
     canvas.innerHTML = "";
     tabGroup.innerHTML = "";
     document.getElementById('username').value = "";
     document.getElementById('password').value = "";
-    
+
     appContainer.classList.add('hidden');
     loginModal.classList.remove('hidden');
   });
@@ -152,21 +152,21 @@ document.addEventListener('DOMContentLoaded', () => {
     currentUser = username;
     document.getElementById('nav-username').textContent = username;
     document.getElementById('user-initial').textContent = username.charAt(0).toUpperCase();
-    
+
     loginModal.classList.add('hidden');
     appContainer.classList.remove('hidden');
-    
+
     // Parse cached data
     const rawContent = localStorage.getItem('uni-note_content') || "";
     currentContentHash = localStorage.getItem('uni-note_hash') || "";
     const cachedActiveTab = localStorage.getItem('uni-note_activeTab') || null;
     initTabsData(rawContent, cachedActiveTab);
-    
+
     checkRemoteSync(username);
-    
+
     // Show cached version immediately
     updateProfileUI(currentProfilePhoto);
-    
+
     // Then refresh from server
     fetchProfile(username);
   }
@@ -186,10 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateProfileUI(base64) {
     if (base64 === undefined) return; // Don't clear if data is missing from sync
-    
+
     currentProfilePhoto = base64;
     const initial = currentUser ? currentUser.charAt(0).toUpperCase() : 'U';
-    
+
     if (base64) {
       userAvatar.innerHTML = `<img src="${base64}" alt="Avatar">`;
       profilePreview.innerHTML = `<img src="${base64}" alt="Avatar">`;
@@ -225,11 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const base64 = event.target.result;
-      
+
       // Optimize image before saving (Resize to max 300x300)
       const compressedBase64 = await resizeImage(base64, 300, 300);
       updateProfileUI(compressedBase64);
-      
+
       // Save to server immediately for profile images
       saveProfileImageToServer(compressedBase64);
     };
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function initTabsData(rawContentString, targetedTabId = null) {
     try {
       if (!rawContentString) throw new Error("Empty String");
-      
+
       // Try to parse as the new JSON format
       const parsed = JSON.parse(rawContentString);
       if (typeof parsed === 'object' && Object.keys(parsed).length > 0) {
@@ -298,16 +298,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       // It's likely an old raw HTML string, gently migrate it
-      tabsData = { 
+      tabsData = {
         "tab1": { "name": "tab1", "data": rawContentString || "" }
       };
     }
-    
+
     // Assign active tab matching target or fallback to first
-    activeTabId = (targetedTabId && tabsData[targetedTabId]) 
-                    ? targetedTabId 
-                    : (Object.keys(tabsData)[0] || "tab1");
-                    
+    activeTabId = (targetedTabId && tabsData[targetedTabId])
+      ? targetedTabId
+      : (Object.keys(tabsData)[0] || "tab1");
+
     if (!tabsData[activeTabId]) {
       tabsData[activeTabId] = { name: 'tab1', data: '' };
     }
@@ -320,12 +320,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderTabs() {
     tabGroup.innerHTML = '';
     const keys = Object.keys(tabsData);
-    
+
     keys.forEach(tabId => {
       const tabObj = tabsData[tabId];
       const tabEl = document.createElement('div');
       tabEl.className = `tab-item ${tabId === activeTabId ? 'active' : ''}`;
-      
+
       // Build inner layout
       const span = document.createElement('span');
       span.textContent = tabObj.name;
@@ -342,12 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         tabEl.appendChild(closeBtn);
       }
-      
+
       tabEl.addEventListener('click', (e) => {
         if (e.target.classList.contains('close-tab')) return;
         switchTab(tabId);
       });
-      
+
       tabGroup.appendChild(tabEl);
     });
   }
@@ -398,15 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Switch Active Tab
   function switchTab(newTabId) {
     if (newTabId === activeTabId) return;
-    
+
     // Save current canvas to active tab before switching
     if (activeTabId && tabsData[activeTabId]) {
       tabsData[activeTabId].data = canvas.innerHTML;
     }
-    
+
     activeTabId = newTabId;
     renderTabs();
-    
+
     // Load new canvas
     canvas.innerHTML = tabsData[newTabId].data;
   }
@@ -432,17 +432,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeTabId && tabsData[activeTabId]) {
       tabsData[activeTabId].data = canvas.innerHTML;
     }
-    
+
     const existingIds = Object.keys(tabsData);
     let counter = existingIds.length + 1;
     let newId = `tab${counter}`;
-    
+
     // Prevent overriding existing ID inherently
-    while(tabsData[newId]) {
+    while (tabsData[newId]) {
       counter++;
       newId = `tab${counter}`;
     }
-    
+
     tabsData[newId] = { name: desiredName, data: '' };
     newTabModal.classList.add('hidden');
     switchTab(newId);
@@ -454,19 +454,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeTabId && tabsData[activeTabId]) {
       tabsData[activeTabId].data = canvas.innerHTML;
     }
-    
+
     const existingIds = Object.keys(tabsData);
     let counter = existingIds.length + 1;
     let newId = `tab${counter}`;
     let newName = `tab ${counter}`;
-    
+
     // Prevent overriding existing ID inherently
-    while(tabsData[newId]) {
+    while (tabsData[newId]) {
       counter++;
       newId = `tab${counter}`;
       newName = `tab ${counter}`;
     }
-    
+
     tabsData[newId] = { name: newName, data: '' };
     newTabModal.classList.add('hidden');
     switchTab(newId);
@@ -478,31 +478,31 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       appContainer.classList.add('blur-screen');
       setSyncStatus('Checking cloud...', '#3b82f6');
-      
+
       const hashRes = await smartFetch(`${API_BASE}/api/hash/${username}`);
       if (!hashRes.ok) throw new Error("Network response wasn't OK");
-      
+
       const { hash: remoteHash } = await hashRes.json();
-      
+
       if (remoteHash && remoteHash !== currentContentHash) {
         setSyncStatus('Downloading...', '#eab308');
-        
+
         const dataRes = await smartFetch(`${API_BASE}/api/data/${username}`);
         if (!dataRes.ok) throw new Error("Failed to fetch data");
         const remoteData = await dataRes.json();
-        
+
         // Fully load object logic and DOM
         initTabsData(remoteData.content, remoteData.activeTab);
         currentContentHash = remoteData.hash || "";
         localStorage.setItem('uni-note_content', remoteData.content || "");
         localStorage.setItem('uni-note_hash', remoteData.hash || "");
         if (remoteData.activeTab) localStorage.setItem('uni-note_activeTab', remoteData.activeTab);
-        
+
         if (remoteData.profilePhoto) {
           updateProfileUI(remoteData.profilePhoto);
         }
       }
-      
+
       setSyncStatus('Up to date', '#10b981');
     } catch (err) {
       console.error('Remote sync check failed', err);
@@ -521,12 +521,12 @@ document.addEventListener('DOMContentLoaded', () => {
       tabsData[activeTabId].data = canvas.innerHTML;
       localStorage.setItem('uni-note_activeTab', activeTabId);
     }
-    
+
     // Serialize entire architecture
     const JSONPayload = JSON.stringify(tabsData);
     localStorage.setItem('uni-note_content', JSONPayload);
-    
-    setSyncStatus('Pending...', '#eab308'); 
+
+    setSyncStatus('Pending...', '#eab308');
 
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
@@ -536,28 +536,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function saveToServer(contentJSONString) {
     if (!currentUser) return;
-    setSyncStatus('Syncing...', '#3b82f6'); 
+    setSyncStatus('Syncing...', '#3b82f6');
     manualSaveBtn.classList.add('hidden'); // Hide the button immediately when we move out of pending status
-    
+
     try {
       const newHash = await generateHash(contentJSONString);
       if (newHash === currentContentHash) {
         setSyncStatus('Ready', '#10b981');
-        return; 
+        return;
       }
-      
+
       const res = await smartFetch(`${API_BASE}/api/data/${currentUser}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          content: contentJSONString, 
-          hash: newHash, 
+        body: JSON.stringify({
+          content: contentJSONString,
+          hash: newHash,
           activeTab: activeTabId
         })
       });
-      
+
       if (!res.ok) throw new Error("Sync failed");
-      
+
       currentContentHash = newHash;
       localStorage.setItem('uni-note_hash', newHash);
       setSyncStatus('Cloud Synced', '#10b981');
@@ -589,14 +589,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function setSyncStatus(text, color) {
     syncText.textContent = text;
     syncDot.style.backgroundColor = color;
-    
+
     // Clear any previous special pulses
     syncDot.classList.remove('sync-pulse', 'warning-pulse', 'danger-pulse');
-    
+
     if (text === 'Syncing...' || text === 'Checking cloud...') {
       syncDot.classList.add('sync-pulse');
     }
-    
+
     // Show 'Save Now' button ONLY when pending sync
     if (text === 'Pending...') {
       manualSaveBtn.classList.remove('hidden');
@@ -609,9 +609,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (manualSaveBtn) {
     manualSaveBtn.addEventListener('click', async (e) => {
       e.stopPropagation(); // Avoid triggering any container clicks
-      
+
       clearTimeout(saveTimeout);
-      
+
       // Serialize architecture for immediate save
       const JSONPayload = localStorage.getItem('uni-note_content');
       if (JSONPayload) {
@@ -634,10 +634,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Using sendBeacon for best-effort delivery on unload
     // It must be a BloB with JSON content type for standard Express bodyParser to pick it up cleanly
-    const blob = new Blob([JSON.stringify({ 
-      content: JSONPayload, 
+    const blob = new Blob([JSON.stringify({
+      content: JSONPayload,
       hash: "UNLOAD_FINAL_SYNC", // Skip hash check on server for final beacon
-      activeTab: activeTabId 
+      activeTab: activeTabId
     })], { type: 'application/json' });
 
     navigator.sendBeacon(`${API_BASE}/api/data/${currentUser}`, blob);
@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Wrap selection with <br> in front and a space at the end
     const textPrefix = "\n";
-    const textSuffix = " "; 
+    const textSuffix = " ";
     const htmlPrefix = "<br>";
     const htmlSuffix = "&nbsp;";
 
